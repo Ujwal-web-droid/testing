@@ -34,17 +34,26 @@ async def lifespan(app: FastAPI):
     """Application lifespan — init DB and scheduler on startup, cleanup on shutdown."""
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     
-    # Initialize database tables (dev mode — use Alembic in prod)
-    await init_db()
-    logger.info("Database initialized")
+    # Initialize database tables
+    try:
+        await init_db()
+        logger.info("Database initialized")
+    except Exception as e:
+        logger.warning(f"Database init deferred (DB connecting): {e}")
 
     # Start background scheduler
-    start_scheduler()
+    try:
+        start_scheduler()
+    except Exception as e:
+        logger.warning(f"Scheduler init deferred: {e}")
 
     yield
 
     # Shutdown
-    stop_scheduler()
+    try:
+        stop_scheduler()
+    except Exception as e:
+        logger.warning(f"Scheduler shutdown error: {e}")
     logger.info("Application shutdown complete")
 
 

@@ -1,4 +1,4 @@
-# ─── Stage 1: Install ALL dependencies (including devDeps for build) ──
+# ─── Stage 1: Install dependencies ───────────────────────────────────
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
@@ -20,13 +20,14 @@ ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-key
 
 RUN npm run build
 
-# ─── Stage 3: Production runner (lean image) ─────────────────────────
+# ─── Stage 3: Production runner ──────────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME="0.0.0.0"
+ENV PORT=3000
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
@@ -34,7 +35,6 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
 
-# Copy the built Next.js standalone output
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
@@ -42,5 +42,4 @@ USER nextjs
 
 EXPOSE 3000
 
-# Railway provides $PORT at runtime
-CMD ["sh", "-c", "PORT=${PORT:-3000} HOSTNAME=0.0.0.0 node server.js"]
+CMD ["node", "server.js"]
