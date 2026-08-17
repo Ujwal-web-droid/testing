@@ -1,1 +1,1 @@
-web: cd frontend && npx next start -p ${PORT:-3000} -H 0.0.0.0
+web: npm start

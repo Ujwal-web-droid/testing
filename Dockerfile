@@ -1,9 +1,9 @@
-# ─── Stage 1: Install ALL dependencies (including devDeps for build) ──
+# ─── Stage 1: Install dependencies ───────────────────────────────────
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-COPY frontend/package.json frontend/package-lock.json ./
+COPY package.json package-lock.json ./
 RUN npm ci
 
 # ─── Stage 2: Build the Next.js application ──────────────────────────
@@ -11,7 +11,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY frontend/ .
+COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
