@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.gitignore
+*.md
+.agents
+backend/__pycache__
+backend/.venv
+backend/env
+mcp-server/node_modules
+frontend/node_modules
+frontend/.next
+frontend/.env.local
