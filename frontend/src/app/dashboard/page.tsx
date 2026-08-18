@@ -83,14 +83,22 @@ export default function DashboardPage() {
     } catch {}
   };
 
-  const loadWebsites = async () => {
+  const loadWebsites = async (preferredSiteId?: string) => {
     try {
       const data = await websitesApi.list();
       setWebsites(data.websites);
       if (data.websites.length > 0) {
-        const first = data.websites[0];
-        setSelectedSite(first);
-        loadSiteScan(first);
+        setSelectedSite((current) => {
+          const targetId = preferredSiteId || current?.id;
+          const matched = targetId
+            ? data.websites.find((w) => w.id === targetId || w.domain === targetId)
+            : null;
+          const chosen = matched || current || data.websites[0];
+          if (chosen && (!current || current.id !== chosen.id)) {
+            loadSiteScan(chosen);
+          }
+          return chosen;
+        });
       }
     } catch {}
   };
@@ -107,8 +115,9 @@ export default function DashboardPage() {
     setLoading(true);
     try {
       const site = await websitesApi.create({ domain: newDomain });
-      setWebsites((prev) => [site, ...prev]);
+      setWebsites((prev) => [site, ...prev.filter((s) => s.id !== site.id && s.domain !== site.domain)]);
       setSelectedSite(site);
+      setScanResult(null);
       setNewDomain("");
       showToast("Domain added successfully");
     } catch (err: any) {
@@ -120,14 +129,22 @@ export default function DashboardPage() {
 
   const triggerScan = async () => {
     if (!selectedSite) return;
+    const currentSite = selectedSite;
     setScanning(true);
     setScanStep(0);
     setScanResult(null);
     setActiveTab("scan");
     try {
-      const result = await scansApi.trigger(selectedSite.id, selectedSite.domain);
+      const result = await scansApi.trigger(currentSite.id, currentSite.domain);
       setScanResult(result);
-      loadWebsites();
+      // Refresh websites list to reflect new score without shifting the active site selection
+      const data = await websitesApi.list();
+      setWebsites(data.websites);
+      setSelectedSite((prev) =>
+        prev?.id === currentSite.id
+          ? { ...prev, last_score: result.overall_score, last_scanned_at: result.created_at }
+          : prev
+      );
       showToast(`Scan complete — Score: ${result.overall_score}/100`);
     } catch (err: any) {
       showToast(err.message, "error");
